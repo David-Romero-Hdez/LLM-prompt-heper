@@ -1,22 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NestedFolder, UIItem } from '../types/types';
 import ItemCard from '../components/ItemCard';
 import FooterActions from '../components/FooterActions';
 import NavBar from '../components/NavBar';
 import { ButtonType } from '../components/CustomButton';
-import { getAllItems } from '../services/promptService';
+import { getAllItems, removeItemById } from '../services/promptService';
 import SearchBar from '../components/SearchBar';
 import { usePromptActions } from '../services/promptActions';
-import { removeItemById } from '../services/promptService';
 
 export default function MyPrompts() {
-  const [items, setItems] = useState<UIItem[]>(getAllItems());
+  const [items, setItems] = useState<UIItem[]>([]);
 
   const [selectedItem, setSelectedItem] = useState<{ id: string; type: string } | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
 
   const { handleCreatePrompt, handleCreateFolder, handleEdit, handlePopulate } = usePromptActions();
+
+  // Load items when component mounts
+  useEffect(() => {
+    const loadItems = async () => {
+      const loadedItems = await getAllItems();
+      setItems(loadedItems);
+    };
+    loadItems();
+  }, []);
 
   const handleSelect = (id: string, type: string) => {
     setSelectedItem(prev => (prev?.id === id ? null : { id, type }));
@@ -34,11 +42,10 @@ export default function MyPrompts() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    // Implement recursive delete logic
-    removeItemById(id);
-    setItems(getAllItems());
-    //reset selected item
+  const handleDelete = async (id: string) => {
+    await removeItemById(id);
+    const updatedItems = await getAllItems();
+    setItems(updatedItems);
     setSelectedItem(null);
   };
 

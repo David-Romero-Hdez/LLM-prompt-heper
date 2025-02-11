@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NavBar from "../components/NavBar";
 import SearchBar from "../components/SearchBar";
 import PromptList from "../components/PromptList";
@@ -8,13 +8,20 @@ import { Prompt } from "../types/types";
 import { ButtonType } from "../components/CustomButton";
 import { usePromptActions } from '../services/promptActions';
 
-
-
 export default function MainScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
-  const [prompts, setPrompts] = useState<Prompt[]>(getAllPrompts().sort((a, b) => b.usageCount - a.usageCount));
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const { handleCreatePrompt, handleEdit, handlePopulate, handleClose } = usePromptActions();
+
+  // Load prompts when component mounts
+  useEffect(() => {
+    const loadPrompts = async () => {
+      const loadedPrompts = await getAllPrompts();
+      setPrompts(loadedPrompts.sort((a, b) => b.usageCount - a.usageCount));
+    };
+    loadPrompts();
+  }, []);
 
   // Filter or slice the prompts for search results vs. frequently used
   const displayedPrompts = searchTerm
@@ -25,11 +32,10 @@ export default function MainScreen() {
     setSelectedPromptId(prev => (prev === promptId ? null : promptId));
   }
 
-  function handleDeletePrompt(id: string) {
-    // Remove from the array in state
-    // TODO: Remove with promptService
-    removeItemById(id);
-    setPrompts(getAllPrompts().sort((a, b) => b.usageCount - a.usageCount));
+  async function handleDeletePrompt(id: string) {
+    await removeItemById(id);
+    const updatedPrompts = await getAllPrompts();
+    setPrompts(updatedPrompts.sort((a, b) => b.usageCount - a.usageCount));
   }
 
   const getFooterButtons = () => {

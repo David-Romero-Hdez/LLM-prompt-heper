@@ -16,7 +16,6 @@ export default function ItemFormScreen() {
   const location = useLocation();
   const { handleCancel } = usePromptActions();
 
-  // Get itemType and parentFolderId from location state
   const locationState = location.state as { 
     itemType?: "prompt" | "folder";
     parentFolderId?: string;
@@ -26,41 +25,51 @@ export default function ItemFormScreen() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(locationState.parentFolderId || null);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
+  const [folders, setFolders] = useState<Awaited<ReturnType<typeof getAllFolders>>>([]);
   
   const isEditMode = Boolean(id);
-  const folders = getAllFolders();
 
+  // Load folders and existing prompt data if in edit mode
   useEffect(() => {
-    if (isEditMode && id) {
-      const existingPrompt = getPromptById(id);
-      if (existingPrompt) {
-        setTitle(existingPrompt.title);
-        setText(existingPrompt.text);
-        setCurrentFolderId(existingPrompt.parentId);
+    const loadData = async () => {
+      // Load folders
+      const loadedFolders = await getAllFolders();
+      setFolders(loadedFolders);
+
+      // Load existing prompt data if in edit mode
+      if (isEditMode && id) {
+        const existingPrompt = await getPromptById(id);
+        if (existingPrompt) {
+          setTitle(existingPrompt.title);
+          setText(existingPrompt.text);
+          setCurrentFolderId(existingPrompt.parentId);
+        }
       }
-    }
+    };
+
+    loadData();
   }, [isEditMode, id]);
 
-  function handleSave() {
+  async function handleSave() {
     if (isEditMode && id) {
       if (itemType === "prompt") {
-        updatePrompt(id, { 
+        await updatePrompt(id, { 
           title, 
           text,
           folderId: currentFolderId || undefined
         });
       } else {
-        updateFolder(id, { title });
+        await updateFolder(id, { title });
       }
     } else {
       if (itemType === "prompt") {
-        createPrompt({ 
+        await createPrompt({ 
           title, 
           text, 
           folderId: currentFolderId || undefined
         });
       } else {
-        createFolder(title, currentFolderId || undefined);
+        await createFolder(title, currentFolderId || undefined);
       }
     }
     navigate(-1);
